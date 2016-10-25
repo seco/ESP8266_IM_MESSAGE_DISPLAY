@@ -8,6 +8,11 @@ void esp8266_init_complete(void);
 //void set_wifi_parameters(void);
 //void wifi_event_handler_function(System_Event_t* event);
 void setupPins(void);
+void timer_led_callback(void *pArg);
+void timer_smartconfig_callback(void* pArg);
+
+os_timer_t timer_led;
+os_timer_t timer_smartconfig;
 
 void user_init(void)
 {
@@ -15,6 +20,9 @@ void user_init(void)
 	//no need to set pin functionality as GPIO1
 	//by default is set to TXD0
 	uart_div_modify(0, UART_CLK_FREQ / 115200);
+
+	//setup pins
+	setupPins();
 
 	//register callback function for when environment
 	//100% functional
@@ -24,6 +32,9 @@ void user_init(void)
 void setupPins(void)
 {
 	//set pins for gpio and peripherals
+	//GPIO-D3 : OUTPUT : LED
+
+	PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0RXD_U, FUNC_GPIO3);
 }
 
 void esp8266_init_complete(void)
@@ -35,6 +46,15 @@ void esp8266_init_complete(void)
 	wifi_get_macaddr(STATION_IF, system_mac);
 
 	os_printf("Module MAC ADDRESS : %02x:%02x:%02x:%02x:%02x:%02x\n", system_mac[0], system_mac[1], system_mac[2], system_mac[3], system_mac[4], system_mac[5]);
+
+	//initialize and start timers
+	//led timer : 500ms period
+	os_timer_setfn(&timer_led, timer_led_callback, NULL);
+	//smartconfig timer : 4sec period
+	os_timer_setfn(&timer_smartconfig, timer_smartconfig_callback, NULL);
+	os_timer_arm(&timer_led, 500, 1);
+	os_timer_arm(&timer_smartconfig, 8000, 0);
+
 }
 
 /*
@@ -117,6 +137,35 @@ void set_wifi_parameters(void)
 	wifi_station_connect();
 }
 */
+
+void timer_led_callback(void *pArg)
+{
+	LOCAL uint8_t led_on = 0;
+
+	os_printf("timer led called ... ");
+	os_printf("time : %d\n", system_get_time());
+
+	if(!led_on)
+	{
+		GPIO_OUTPUT_SET(3, 1);
+		led_on = 1;
+	}
+	else
+	{
+		GPIO_OUTPUT_SET(3,0);
+		led_on = 0;
+	}
+}
+
+void timer_smartconfig_callback(void* pArg)
+{
+	os_printf("timer smartconfig called ... ");
+	os_printf("time : %d\n", system_get_time());
+
+	os_printf("smartconfig mode timeout .. disarming timers\n");
+	os_timer_disarm(&timer_led);
+	os_timer_disarm(&timer_smartconfig);
+}
 
 uint32 ICACHE_FLASH_ATTR
 user_rf_cal_sector_set(void)
