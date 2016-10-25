@@ -10,6 +10,7 @@ void esp8266_init_complete(void);
 void setupPins(void);
 void timer_led_callback(void *pArg);
 void timer_smartconfig_callback(void* pArg);
+void wifi_event_handler_function(System_Event_t* event);
 
 os_timer_t timer_led;
 os_timer_t timer_smartconfig;
@@ -47,6 +48,9 @@ void esp8266_init_complete(void)
 
 	os_printf("Module MAC ADDRESS : %02x:%02x:%02x:%02x:%02x:%02x\n", system_mac[0], system_mac[1], system_mac[2], system_mac[3], system_mac[4], system_mac[5]);
 
+	//set a custom wifi event handler function
+	wifi_set_event_handler_cb(wifi_event_handler_function);
+
 	//initialize and start timers
 	//led timer : 500ms period
 	os_timer_setfn(&timer_led, timer_led_callback, NULL);
@@ -82,6 +86,7 @@ void module_init_complete(void)
 
 	set_wifi_parameters();
 }
+*/
 
 void wifi_event_handler_function(System_Event_t* event)
 {
@@ -120,6 +125,7 @@ void wifi_event_handler_function(System_Event_t* event)
 	}
 }
 
+/*
 void set_wifi_parameters(void)
 {
 	//set the wifi parameters
