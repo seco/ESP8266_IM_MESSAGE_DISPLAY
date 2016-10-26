@@ -32,6 +32,9 @@
 								<option id="gnu.c.compiler.mingw.exe.release.option.debugging.level.2127816401" name="Debug Level" superClass="gnu.c.compiler.mingw.exe.release.option.debugging.level" useByScannerDiscovery="false" value="gnu.c.debugging.level.none" valueType="enumerated"/>
 								<option id="gnu.c.compiler.option.include.paths.1211013621" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;C:\Espressif\ESP8266_SDK\include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;C:\Users\Ankit\Dropbox\Archive\Electronics\From_Disk\Libraries\ESP8266_SPI&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;C:\Users\Ankit\Dropbox\Archive\Electronics\From_Disk\Libraries\MAX7221_7219&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;C:\Espressif\ESP8266_SDK\driver_lib\include\driver&quot;"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.1239573798" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
@@ -44,6 +47,10 @@
 							<tool id="cdt.managedbuild.tool.gnu.cpp.linker.mingw.exe.release.2027364458" name="MinGW C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.mingw.exe.release"/>
 						</toolChain>
 					</folderInfo>
+					<sourceEntries>
+						<entry excluding="Libraries" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Libraries"/>
+					</sourceEntries>
 				</configuration>
 			</storageModule>
 			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>

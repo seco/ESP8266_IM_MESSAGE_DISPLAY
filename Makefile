@@ -168,6 +168,9 @@ TARGET = app
 # which modules (subdirectories) of the project to include in compiling
 MODULES	= driver user
 EXTRA_INCDIR = include $(SDK_BASE)/../extra/include
+EXTRA_INCDIR := $(EXTRA_INCDIR) C:/Espressif/ESP8266_SDK/driver_lib/include/driver
+EXTRA_INCDIR := $(EXTRA_INCDIR) C:/Users/Ankit/Dropbox/Archive/Electronics/From_Disk/Libraries/ESP8266_SPI
+EXTRA_INCDIR := $(EXTRA_INCDIR) C:/Users/Ankit/Dropbox/Archive/Electronics/From_Disk/Libraries/MAX7221_7219
 
 # libraries used in this project, mainly provided by the SDK
 LIBS = c gcc hal phy pp net80211 lwip wpa crypto main smartconfig

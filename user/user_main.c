@@ -14,6 +14,7 @@
 #include "user_interface.h"		//NEEDS TO BE THERE IN EVERY ESP8266 PROGRAM
 #include "uart.h"
 #include "smartconfig.h"
+#include <ESP8266_SPI.h>
 
 //////////////////////////////////
 //FUNCTION PROTOTYPES
