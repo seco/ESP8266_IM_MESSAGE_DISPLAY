@@ -356,6 +356,10 @@ else
 endif
 endif
 
+copyfiles:
+	cp  C:/Users/Ankit/Dropbox/Archive/Electronics/From_Disk/Libraries/ESP8266_SPI/* ./user
+	cp  C:/Users/Ankit/Dropbox/Archive/Electronics/From_Disk/Libraries/MAX7221_7219/* ./user
+	
 # ===============================================================
 # From http://bbs.espressif.com/viewtopic.php?f=10&t=305
 # master-device-key.bin is only need if using espressive services
@@ -379,7 +383,7 @@ flashinit:
 	$(vecho) "Flash init data default and blank data."
 	$(ESPTOOL) -p $(ESPPORT) write_flash $(flashimageoptions) 0x7c000 $(SDK_BASE)/bin/esp_init_data_default.bin 0x7e000 $(SDK_BASE)/bin/blank.bin
 
-rebuild: clean all
+rebuild: clean copyfiles all
 
 clean:
 	$(Q) rm -f $(APP_AR)
@@ -387,5 +391,7 @@ clean:
 	$(Q) rm -rf $(BUILD_DIR)
 	$(Q) rm -rf $(BUILD_BASE)
 	$(Q) rm -rf $(FW_BASE)
-
+	$(Q) rm -rf ./user/ESP8266*
+	$(Q) rm -rf ./user/MAX7221*
+	
 $(foreach bdir,$(BUILD_DIR),$(eval $(call compile-objects,$(bdir))))

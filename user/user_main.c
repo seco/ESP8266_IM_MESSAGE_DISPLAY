@@ -14,7 +14,7 @@
 #include "user_interface.h"		//NEEDS TO BE THERE IN EVERY ESP8266 PROGRAM
 #include "uart.h"
 #include "smartconfig.h"
-#include <ESP8266_SPI.h>
+#include "ESP8266_SPI.h"
 
 //////////////////////////////////
 //FUNCTION PROTOTYPES
@@ -71,6 +71,7 @@ void esp8266_init_complete(void)
 	{
 		//MODE SELECTION BUTTON PRESSED
 		//SMARTCONFIG MODE
+		os_printf("smartconfig mode\n");
 		//START TIMER TO TOGGLE LED @ 2Hz
 		os_timer_setfn(&timer_led, timer_led_callback, NULL);
 		os_timer_arm(&timer_led, 500, 1);
@@ -83,6 +84,9 @@ void esp8266_init_complete(void)
 	else
 	{
 		//NORMAL MODE
+		os_printf("normal operation mode\n");
+		//INIT SPI PINS
+		ESP8266_SPI_init_pins();
 	}
 }
 
