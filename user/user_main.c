@@ -1,97 +1,94 @@
+/*************************************************
+* ESP8266 IM MESSAGE DISPLAY
+*
+* OCTOBER 21 2016
+* ANKIT BHATNAGAR
+* ANKIT.BHATNAGARINDIA@GMAIL.COM
+* ***********************************************/
 
+//////////////////////////////////
+//INCLUDES
+/////////////////////////////////
 #include <osapi.h>
 #include <ets_sys.h>			//NEEDS TO BE THERE IN EVERY ESP8266 PROGRAM
 #include "user_interface.h"		//NEEDS TO BE THERE IN EVERY ESP8266 PROGRAM
 #include "uart.h"
+#include "smartconfig.h"
 
+//////////////////////////////////
+//FUNCTION PROTOTYPES
+//////////////////////////////////
 void esp8266_init_complete(void);
 //void set_wifi_parameters(void);
-//void wifi_event_handler_function(System_Event_t* event);
-void setupPins(void);
+void setup_gpio_pins(void);
 void timer_led_callback(void *pArg);
-void timer_smartconfig_callback(void* pArg);
 void wifi_event_handler_function(System_Event_t* event);
+void smartconfig_done_function(sc_status status, void* pdata);
 
+//////////////////////////////////
+//GLOBAL VARIABLES
+//////////////////////////////////
 os_timer_t timer_led;
-os_timer_t timer_smartconfig;
 
 void user_init(void)
 {
-	//set usart0 to 115200bps
-	//no need to set pin functionality as GPIO1
-	//by default is set to TXD0
+	//SET USART0 BAUD RATE TO 115200 BPS
+	//BY DEFAULT PIN GPIO1 SET TO UART0 TXD FUNCTIONALITY
 	uart_div_modify(0, UART_CLK_FREQ / 115200);
 
-	//setup pins
-	setupPins();
+	//SET UP GPIO PONS
+	setup_gpio_pins();
 
-	//register callback function for when environment
-	//100% functional
+	//REGISTER CALLBACK FUNCTION FOR ENVIRONMENT INITIALIZATION DONE
 	system_init_done_cb(esp8266_init_complete);
 }
 
-void setupPins(void)
+void setup_gpio_pins(void)
 {
-	//set pins for gpio and peripherals
+	//INITIAL SETUP FOR GPIO PINSs
 	//GPIO-D3 : OUTPUT : LED
+	//GPIO-D5 : INPUT : MODE SELECT BUTTON (NORMAL / SMARTCONFIG)
 
 	PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0RXD_U, FUNC_GPIO3);
+	PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO5_U, FUNC_GPIO5);
 }
 
 void esp8266_init_complete(void)
 {
 	os_printf("ESP8266 module init complete\n");
 
-	//print some basic information about the module
+	//PRINT SOME BADIC INFORMATION ABOUT THE MODULE
 	char system_mac[6];
 	wifi_get_macaddr(STATION_IF, system_mac);
-
 	os_printf("Module MAC ADDRESS : %02x:%02x:%02x:%02x:%02x:%02x\n", system_mac[0], system_mac[1], system_mac[2], system_mac[3], system_mac[4], system_mac[5]);
 
-	//set a custom wifi event handler function
+	//SET CUSTOM WIFI EVENT HANDLER FUNCTION
 	wifi_set_event_handler_cb(wifi_event_handler_function);
 
-	//initialize and start timers
-	//led timer : 500ms period
-	os_timer_setfn(&timer_led, timer_led_callback, NULL);
-	//smartconfig timer : 4sec period
-	os_timer_setfn(&timer_smartconfig, timer_smartconfig_callback, NULL);
-	os_timer_arm(&timer_led, 500, 1);
-	os_timer_arm(&timer_smartconfig, 8000, 0);
+	//DETERMINE WEATHER TO START IN STATION SMARTCONFIG MODE
+	if(GPIO_INPUT_GET(5) == 1)
+	{
+		//MODE SELECTION BUTTON PRESSED
+		//SMARTCONFIG MODE
+		//START TIMER TO TOGGLE LED @ 2Hz
+		os_timer_setfn(&timer_led, timer_led_callback, NULL);
+		os_timer_arm(&timer_led, 500, 1);
 
+		//START SMARTCONFIG
+		//NEED THE MODULE TO BE IN STATION MODE FIRST FOR SMARTCONFIG TO WORK
+		wifi_set_opmode(STATION_MODE);
+		smartconfig_start(smartconfig_done_function, SC_TYPE_ESPTOUCH);
+	}
+	else
+	{
+		//NORMAL MODE
+	}
 }
-
-/*
-void module_init_complete(void)
-{
-	//at this point the module initialization
-	//is 100% done
-
-
-	//setup UART0
-	//UART_SetBaudrate(0, BIT_RATE_9600);
-	//UART_SetParity(0, STICK_PARITY_DIS);
-	//UART_SetStopBits(0, ONE_STOP_BIT);
-	//UART_SetWordLength(0, EIGHT_BITS);
-	//uart_init(BIT_RATE_9600, BIT_RATE_9600);
-	//UART_SetPrintPort(0);
-
-	os_printf("system init complete\n");
-
-
-
-
-	//set a custom wifi event handler function
-	wifi_set_event_handler_cb(wifi_event_handler_function);
-
-	set_wifi_parameters();
-}
-*/
 
 void wifi_event_handler_function(System_Event_t* event)
 {
-	//custom wifi event handler function
-	//simple print the event information on debug uart1
+	//WIFI EVENT HANDLER FUNCTION
+	//SIMPLY PRINTS THE NAME OF THE WIFI EVENT FOR DEBUGGING
 
 	switch(event->event)
 	{
@@ -163,16 +160,65 @@ void timer_led_callback(void *pArg)
 	}
 }
 
-void timer_smartconfig_callback(void* pArg)
+void smartconfig_done_function(sc_status status, void* pdata)
 {
-	os_printf("timer smartconfig called ... ");
-	os_printf("time : %d\n", system_get_time());
+	switch(status)
+	{
+		case SC_STATUS_WAIT:
+			os_printf("SMARTCONFIG - SC_STATUS_WAIT\n");
+			break;
 
-	os_printf("smartconfig mode timeout .. disarming timers\n");
-	os_timer_disarm(&timer_led);
-	os_timer_disarm(&timer_smartconfig);
+		case SC_STATUS_FIND_CHANNEL:
+			os_printf("SMARTCONFIG - SC_STATUS_FIND_CHANNEL\n");
+			break;
+
+		case SC_STATUS_GETTING_SSID_PSWD:
+			os_printf("SMARTCONFIG - SC_STATUS_GETTING_SSID_PSWD\n");
+			sc_type* type = pdata;
+			if(*type == SC_TYPE_ESPTOUCH)
+			{
+				os_printf("SMARTCONFIG - SC_TYPE_ESPTOUCH\n");
+			}
+			else
+			{
+				os_printf("SMARTCONFIG - SC_TYPE_AIRKISS\n");
+			}
+			break;
+
+		case SC_STATUS_LINK:
+			os_printf("SMARTCONFIG - SC_STATUS_LINK\n");
+			struct station_config *sta_conf = pdata;
+			wifi_station_set_config(sta_conf);
+			wifi_station_disconnect();
+			wifi_station_connect();
+			break;
+
+		case SC_STATUS_LINK_OVER:
+			os_printf("SMARTCONFIG - SC_STATUS_LINK_OVER\n");
+			if(pdata != NULL)
+			{
+				//ESP_TOUCH TYPE
+				uint8_t phone_ip[4] = {0,0,0,0};
+				os_memcpy(phone_ip, (uint8_t*)pdata, 4);
+				os_printf("SMARTCONFIG - PHONE IP : %d.%d.%d.%d\n", phone_ip[0], phone_ip[1], phone_ip[2], phone_ip[3]);
+			}
+			else
+			{
+				//ESP_AIRKISS TYPE
+				os_printf("SMARTCONFIG - THIS FIRMEARE DOES NOT SUPPORT AIRKISS\n");
+			}
+			smartconfig_stop();
+
+			//SMARTCONFIG DONE
+			//STOP THE LED TOGGLING TIMER
+			os_timer_disarm(&timer_led);
+			break;
+	}
 }
 
+
+//THIS FUNCTION IS REQUIRED TO BE IN USER_MAIN.C BY ESP8266 SDK
+//COPIED FROM SDK EXAMPLES
 uint32 ICACHE_FLASH_ATTR
 user_rf_cal_sector_set(void)
 {

@@ -23,4 +23,26 @@
 		<nature>org.eclipse.cdt.managedbuilder.core.managedBuildNature</nature>
 		<nature>org.eclipse.cdt.managedbuilder.core.ScannerConfigNature</nature>
 	</natures>
+	<linkedResources>
+		<link>
+			<name>user/ESP8266_SPI.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-ECLIPSE_HOME/Users/Ankit/Dropbox/0.Archive/Electronics/From%20Disk/Libraries/ESP8266_SPI/ESP8266_SPI.c</locationURI>
+		</link>
+		<link>
+			<name>user/ESP8266_SPI.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-ECLIPSE_HOME/Users/Ankit/Dropbox/0.Archive/Electronics/From%20Disk/Libraries/ESP8266_SPI/ESP8266_SPI.h</locationURI>
+		</link>
+		<link>
+			<name>user/MAX7221_7219.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-ECLIPSE_HOME/Users/Ankit/Dropbox/0.Archive/Electronics/From%20Disk/Libraries/MAX7221_7219/MAX7221_7219.c</locationURI>
+		</link>
+		<link>
+			<name>user/MAX7221_7219.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-ECLIPSE_HOME/Users/Ankit/Dropbox/0.Archive/Electronics/From%20Disk/Libraries/MAX7221_7219/MAX7221_7219.h</locationURI>
+		</link>
+	</linkedResources>
 </projectDescription>
