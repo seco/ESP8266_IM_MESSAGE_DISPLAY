@@ -1,21 +1,40 @@
-**************************************************
-****************** README ************************
-**************************************************
+**************************************************************************************************
+***********************************        README      *******************************************
+**************************************************************************************************
 
-1. I have hacked the Makefile to allow me to refer
-   to source code files outside of the user folder
-   in the project workspace.
+1. The project has the main source code files in the 'user' folder
+
+2. 'libs' subfolder within the user folder contains files for my custom libraries. These include
+   stuff like specific IC libs, SPI libs etc. they are used as SUBMODULES from sourcetree
+
+3. These libraries (within the libs folder) are PRIMARILY stored and maintained in a Github repository.
+   In these main repos I do the code edits, feature addition etc. independent of the cloned copies.
    
-   to do this, created a new makefile target 'copyfiles'
-   that coppies these outside source files (c,h) to the
-   user folder in project workspace.
+4. To be used in a project, the main library set as a SUBMODULE in SOURCETREE in the 'user\libs' folder
+   within the project folder
    
-   then just do 'all' as usual. or do 'rebuild'
+   NOTE : DO NOT PUSH ANY PROJECT SPECIFIC CHANGES FROM THESE CLONED REPOS BACK TO THE MAIN LIBRARY REPO.
+          IF SOMETHING NEEDS TO BE CHANGED IN THE LIBRARY, DO IT IN THE MAIN REPO.
+                    
+          THIS STRUCTURE ALLOWS ME TO DO ANY PROJECT SPECIFIC CHANGES TO THE LIBRARY WITHOUT
+          DISTUBING THE ORIGINAL LIBRARY
+          
+5. WITH THIS IN PLACE, IF I DO ANY CHANGES TO THE MAIN LIBRARY REPO, FOR THOSE CHANGES TO REFLECT INTO
+   THE CLONED ONES, I HAVE TO DO FETCH + PULL IN THE SUBMODULE OF THE LIBRARY IN SOURCETREE
+          
+5. For this structure to compile, the following were added to Makefile
    
-   rebuild = clean + copyfiles + all
+   MODULES	= driver user user/libs/ESP8266_SPI user/libs/MAX7221_7219 
+   EXTRA_INCDIR = include $(SDK_BASE)/../extra/include
+   EXTRA_INCDIR := $(EXTRA_INCDIR) C:/Espressif/ESP8266_SDK/driver_lib/include/driver
    
-   note: clean removes these externally copied source files also
+   UNDER MODULES VARIABLE OF MAKEFILE I NEED TO LIST THE COMPLETE RELATIVE PATH OF ALL THE SUBFOLDERS WHERE
+   ANY OF MY CODE RESIDES.
    
-2. to also let me edit and view these external source files, I have
-   also added (linked) them within my eclipse project. This way i can
-   view and edit these files from within eclipse
+   The last line modifying EXTRA_INCDIR variable lets me refer to code in driver_lib folder of the ESP SDK
+   without copying the source/header files from there into my eclipse project folder.
+   
+-----------------------------------------------------------------------------------------------------------
+Refer to https://blog.sourcetreeapp.com/2012/02/01/using-submodules-and-subrepositories/ for info on the
+working of submodules
+-----------------------------------------------------------------------------------------------------------

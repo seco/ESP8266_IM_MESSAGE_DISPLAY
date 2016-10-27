@@ -166,11 +166,11 @@ endif
 TARGET = app
 
 # which modules (subdirectories) of the project to include in compiling
-MODULES	= driver user
+MODULES	= driver user user/libs/ESP8266_SPI user/libs/MAX7221_7219 
 EXTRA_INCDIR = include $(SDK_BASE)/../extra/include
 EXTRA_INCDIR := $(EXTRA_INCDIR) C:/Espressif/ESP8266_SDK/driver_lib/include/driver
-EXTRA_INCDIR := $(EXTRA_INCDIR) C:/Users/Ankit/Dropbox/Archive/Electronics/From_Disk/Libraries/ESP8266_SPI
-EXTRA_INCDIR := $(EXTRA_INCDIR) C:/Users/Ankit/Dropbox/Archive/Electronics/From_Disk/Libraries/MAX7221_7219
+#EXTRA_INCDIR := $(EXTRA_INCDIR) C:/Users/Ankit/Dropbox/Archive/Electronics/From_Disk/Libraries/ESP8266_SPI
+#EXTRA_INCDIR := $(EXTRA_INCDIR) C:/Users/Ankit/Dropbox/Archive/Electronics/From_Disk/Libraries/MAX7221_7219
 
 # libraries used in this project, mainly provided by the SDK
 LIBS = c gcc hal phy pp net80211 lwip wpa crypto main smartconfig
@@ -356,9 +356,9 @@ else
 endif
 endif
 
-copyfiles:
-	cp  C:/Users/Ankit/Dropbox/Archive/Electronics/From_Disk/Libraries/ESP8266_SPI/* ./user
-	cp  C:/Users/Ankit/Dropbox/Archive/Electronics/From_Disk/Libraries/MAX7221_7219/* ./user
+#copyfiles:
+#	cp  C:/Users/Ankit/Dropbox/Archive/Electronics/From_Disk/Libraries/ESP8266_SPI/* ./user
+#	cp  C:/Users/Ankit/Dropbox/Archive/Electronics/From_Disk/Libraries/MAX7221_7219/* ./user
 	
 # ===============================================================
 # From http://bbs.espressif.com/viewtopic.php?f=10&t=305
@@ -383,7 +383,7 @@ flashinit:
 	$(vecho) "Flash init data default and blank data."
 	$(ESPTOOL) -p $(ESPPORT) write_flash $(flashimageoptions) 0x7c000 $(SDK_BASE)/bin/esp_init_data_default.bin 0x7e000 $(SDK_BASE)/bin/blank.bin
 
-rebuild: clean copyfiles all
+#rebuild: clean copyfiles all
 
 clean:
 	$(Q) rm -f $(APP_AR)
@@ -391,7 +391,7 @@ clean:
 	$(Q) rm -rf $(BUILD_DIR)
 	$(Q) rm -rf $(BUILD_BASE)
 	$(Q) rm -rf $(FW_BASE)
-	$(Q) rm -rf ./user/ESP8266*
-	$(Q) rm -rf ./user/MAX7221*
+#	$(Q) rm -rf ./user/ESP8266*
+#	#$(Q) rm -rf ./user/MAX7221*
 	
 $(foreach bdir,$(BUILD_DIR),$(eval $(call compile-objects,$(bdir))))
