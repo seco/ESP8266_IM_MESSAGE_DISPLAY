@@ -1,3 +1,4 @@
 #C Compiled Object Files
 *.o
 *.a
+*.out
