@@ -85,8 +85,17 @@ void esp8266_init_complete(void)
 	{
 		//NORMAL MODE
 		os_printf("normal operation mode\n");
+
+		//CONNECT TO WIFI NETWORK
+		//USED INTERNALLY SAVED CONFIGURATION
+		wifi_set_opmode(STATION_MODE);
+		wifi_station_connect();
+
 		//INIT SPI PINS
 		ESP8266_SPI_init_pins();
+		//ESP8266_SPI_set_params();
+		os_printf("sending spi data\n");
+		ESP8266_SPI_send(0xAB, 0x86);
 	}
 }
 
@@ -196,6 +205,9 @@ void smartconfig_done_function(sc_status status, void* pdata)
 			wifi_station_set_config(sta_conf);
 			wifi_station_disconnect();
 			wifi_station_connect();
+
+			//SET AUTO CONNECT = ON
+			wifi_station_set_auto_connect(1);
 			break;
 
 		case SC_STATUS_LINK_OVER:

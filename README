@@ -1,0 +1,21 @@
+**************************************************
+****************** README ************************
+**************************************************
+
+1. I have hacked the Makefile to allow me to refer
+   to source code files outside of the user folder
+   in the project workspace.
+   
+   to do this, created a new makefile target 'copyfiles'
+   that coppies these outside source files (c,h) to the
+   user folder in project workspace.
+   
+   then just do 'all' as usual. or do 'rebuild'
+   
+   rebuild = clean + copyfiles + all
+   
+   note: clean removes these externally copied source files also
+   
+2. to also let me edit and view these external source files, I have
+   also added (linked) them within my eclipse project. This way i can
+   view and edit these files from within eclipse
