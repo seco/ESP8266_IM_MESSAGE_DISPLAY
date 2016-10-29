@@ -15,6 +15,7 @@
 #include "uart.h"
 #include "smartconfig.h"
 #include "ESP8266_SPI.h"
+#include "MAX7221_7219.h"
 
 //////////////////////////////////
 //FUNCTION PROTOTYPES
@@ -48,10 +49,18 @@ void setup_gpio_pins(void)
 {
 	//INITIAL SETUP FOR GPIO PINSs
 	//GPIO-D3 : OUTPUT : LED
-	//GPIO-D5 : INPUT : MODE SELECT BUTTON (NORMAL / SMARTCONFIG)
+	//GPIO-D5 : INPUT  : MODE SELECT PUSH BUTTON (NORMAL / SMARTCONFIG)
+	//GPIO-D0  : INPUT  : CLEAR MESSAGE PUSH BUTTON
 
 	PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0RXD_U, FUNC_GPIO3);
 	PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO5_U, FUNC_GPIO5);
+	GPIO_DIS_OUTPUT(5);
+	PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO0_U, FUNC_GPIO0);
+
+	ESP8266_SPI_init_pins();
+	ESP8266_SPI_set_params();
+	MAX7221_7219_init();
+	MAX7221_7219_display_test(MAX7221_TRUE);
 }
 
 void esp8266_init_complete(void)
@@ -89,13 +98,9 @@ void esp8266_init_complete(void)
 		//CONNECT TO WIFI NETWORK
 		//USED INTERNALLY SAVED CONFIGURATION
 		wifi_set_opmode(STATION_MODE);
-		wifi_station_connect();
+//		wifi_station_connect();
 
-		//INIT SPI PINS
-		ESP8266_SPI_init_pins();
-		//ESP8266_SPI_set_params();
-		os_printf("sending spi data\n");
-		ESP8266_SPI_send(0xAB, 0x86);
+
 	}
 }
 
@@ -120,7 +125,14 @@ void wifi_event_handler_function(System_Event_t* event)
 
 		case EVENT_STAMODE_GOT_IP:
 			os_printf("EVENT : EVENT_STAMODE_GOT_IP\n");
-
+			os_printf("*** COMPLETE INIT DONE ***\n");
+			//SET SPI PINS AS QUICKLY AS POSSIBLE
+				ESP8266_SPI_init_pins();
+				os_printf("testing max7221\n");
+						MAX7221_7219_init();
+						MAX7221_7219_display_test(MAX7221_TRUE);
+						//AX7221_7219_clear_display();
+						//MAX7221_7219_draw_digit(MAX7221_ADDRESS_DIGIT_0, 255);
 			break;
 
 		case EVENT_SOFTAPMODE_STACONNECTED:
@@ -135,25 +147,6 @@ void wifi_event_handler_function(System_Event_t* event)
 			os_printf("Unknown EVENT %d\n", event->event);
 	}
 }
-
-/*
-void set_wifi_parameters(void)
-{
-	//set the wifi parameters
-
-	wifi_set_opmode(STATION_MODE);
-	struct station_config stationConfig;
-	strncpy(stationConfig.ssid, "ankit", 32);
-	strncpy(stationConfig.password, "casa2016", 64);
-	wifi_station_set_config(&stationConfig);
-
-	//disable auto connect
-	wifi_station_set_auto_connect(FALSE);
-
-	//connect to the access point
-	wifi_station_connect();
-}
-*/
 
 void timer_led_callback(void *pArg)
 {

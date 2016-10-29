@@ -4,6 +4,3 @@
 [submodule "user/libs/MAX7221_7219"]
 	path = user/libs/MAX7221_7219
 	url = https://github.com/ankitmcgill/MAX7221_7219.git
-[submodule "user/libs/ESP8266_SNTP"]
-	path = user/libs/ESP8266_SNTP
-	url = https://github.com/ankitmcgill/ESP8266_SNTP.git
