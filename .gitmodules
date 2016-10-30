@@ -1,3 +1,6 @@
 [submodule "user/libs/ESP8266_SPI"]
 	path = user/libs/ESP8266_SPI
 	url = https://github.com/ankitmcgill/ESP8266_SPI.git
+[submodule "user/libs/LCD_NOKIA_C100"]
+	path = user/libs/LCD_NOKIA_C100
+	url = https://github.com/ankitmcgill/LCD_NOKIA_C100.git
