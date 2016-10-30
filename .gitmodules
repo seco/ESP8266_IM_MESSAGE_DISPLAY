@@ -1,6 +1,3 @@
 [submodule "user/libs/ESP8266_SPI"]
 	path = user/libs/ESP8266_SPI
 	url = https://github.com/ankitmcgill/ESP8266_SPI.git
-[submodule "user/libs/MAX7221_7219"]
-	path = user/libs/MAX7221_7219
-	url = https://github.com/ankitmcgill/MAX7221_7219.git
