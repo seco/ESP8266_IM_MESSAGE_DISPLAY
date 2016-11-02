@@ -44,7 +44,7 @@ SPI_MODE ?= QIO
 # 4 : 4096 KB (512 KB + 512 KB)
 # 5 : 2048 KB (1024 KB + 1024 KB)
 # 6 : 4096 KB (1024 KB + 1024 KB)
-SPI_SIZE_MAP ?= 2
+SPI_SIZE_MAP ?= 5
 
 ifeq ($(BOOT), new)
     boot = new
@@ -166,11 +166,9 @@ endif
 TARGET = app
 
 # which modules (subdirectories) of the project to include in compiling
-MODULES	= driver user user/libs/ESP8266_SPI user/libs/ESP8266_SNTP user/libs/MAX7221_7219
+MODULES	= driver user user/libs/ESP8266_SPI user/libs/LCD_NOKIA_C100 user/libs/ESP8266_UDP user/libs/ESP8266_FLASH
 EXTRA_INCDIR = include $(SDK_BASE)/../extra/include
 EXTRA_INCDIR := $(EXTRA_INCDIR) C:/Espressif/ESP8266_SDK/driver_lib/include/driver
-#EXTRA_INCDIR := $(EXTRA_INCDIR) C:/Users/Ankit/Dropbox/Archive/Electronics/From_Disk/Libraries/ESP8266_SPI
-#EXTRA_INCDIR := $(EXTRA_INCDIR) C:/Users/Ankit/Dropbox/Archive/Electronics/From_Disk/Libraries/MAX7221_7219
 
 # libraries used in this project, mainly provided by the SDK
 LIBS = c gcc hal phy pp net80211 lwip wpa crypto main smartconfig

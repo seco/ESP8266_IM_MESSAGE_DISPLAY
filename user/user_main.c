@@ -15,7 +15,10 @@
 #include "uart.h"
 #include "smartconfig.h"
 #include "ESP8266_SPI.h"
-#include "MAX7221_7219.h"
+#include "LCD_NOKIA_C100.h"
+#include "ESP8266_UDP.h"
+#include "ESP8266_FLASH.h"
+
 
 //////////////////////////////////
 //FUNCTION PROTOTYPES
@@ -26,11 +29,14 @@ void setup_gpio_pins(void);
 void timer_led_callback(void *pArg);
 void wifi_event_handler_function(System_Event_t* event);
 void smartconfig_done_function(sc_status status, void* pdata);
+void udp_listener_cb(void* arg, char* pdata, uint16_t len);
 
 //////////////////////////////////
 //GLOBAL VARIABLES
 //////////////////////////////////
 os_timer_t timer_led;
+uint32_t soft_reset_done = 1;
+uint32_t soft_reset_not_done = 0;
 
 void user_init(void)
 {
@@ -45,27 +51,37 @@ void user_init(void)
 	system_init_done_cb(esp8266_init_complete);
 }
 
-void setup_gpio_pins(void)
+void ICACHE_FLASH_ATTR setup_gpio_pins(void)
 {
 	//INITIAL SETUP FOR GPIO PINSs
 	//GPIO-D3 : OUTPUT : LED
 	//GPIO-D5 : INPUT  : MODE SELECT PUSH BUTTON (NORMAL / SMARTCONFIG)
 	//GPIO-D0  : INPUT  : CLEAR MESSAGE PUSH BUTTON
 
+	WRITE_PERI_REG(PERIPHS_IO_MUX, 0x105);
 	PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0RXD_U, FUNC_GPIO3);
 	PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO5_U, FUNC_GPIO5);
 	GPIO_DIS_OUTPUT(5);
 	PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO0_U, FUNC_GPIO0);
 
+	//INITIALIZA SPI
 	ESP8266_SPI_init_pins();
-	ESP8266_SPI_set_params();
-	MAX7221_7219_init();
-	MAX7221_7219_display_test(MAX7221_TRUE);
+
+	//INITIALIZE NOKIA LCD RESET PIN
+	LCD_NOKIA_C100_set_pins();
 }
 
-void esp8266_init_complete(void)
+void ICACHE_FLASH_ATTR esp8266_init_complete(void)
 {
 	os_printf("ESP8266 module init complete\n");
+
+	os_printf("testing spi + nokia\n");
+
+	//SET ADDRESS LEN = 1 & DATA LEN = 8
+	//SPI CLK = 5Mhz (75% duty)
+	ESP8266_SPI_set_params(1,8, 8, 2, 3, 0);
+	LCD_NOKIA_C100_init();
+	LCD_NOKIA_C100_clear_screen(LCD_NOKIA_C100_COLOR_RED);
 
 	//PRINT SOME BADIC INFORMATION ABOUT THE MODULE
 	char system_mac[6];
@@ -94,17 +110,41 @@ void esp8266_init_complete(void)
 	{
 		//NORMAL MODE
 		os_printf("normal operation mode\n");
-
+		//CHECK FLASH FOR SOFT RESET STATUS
+		os_printf("reading flash for soft reset status\n");
+		uint32_t val;
+		ESP8266_FLASH_read(FLASH_STORE_SECTOR, (uint32_t*)&val, 4);
+		os_printf("flash read\n");
+		if(val == soft_reset_done)
+		{
+			//SOFT RESET DONE. LCD SHOULD BE WORKING NOW
+			//CONTINUE AS NORMAL
+			os_printf("soft reset has been done. continue as normal + reset flash to soft reset not done\n");
+			ESP8266_FLASH_erase(FLASH_STORE_SECTOR);
+			os_printf("flash erased\n");
+			ESP8266_FLASH_write(FLASH_STORE_SECTOR, (uint32_t*)&soft_reset_not_done, 4);
+			os_printf("flash writteb reset not done\n");
+		}
+		else
+		{
+			//SOFT RESET NOT DONE. DO THAT TO MAKE LCD WORK
+			os_printf("soft reset not done. writing to flash soft reset done + doing soft reset\n");
+			ESP8266_FLASH_erase(FLASH_STORE_SECTOR);
+			os_printf("flash erased\n");
+			ESP8266_FLASH_write(FLASH_STORE_SECTOR, (uint32_t*)&soft_reset_done, 4);
+			os_printf("flash written\n");
+			//FORCE SYSTEM RESTART
+			os_delay_us(1000);
+			system_restart();
+		}
 		//CONNECT TO WIFI NETWORK
 		//USED INTERNALLY SAVED CONFIGURATION
 		wifi_set_opmode(STATION_MODE);
-//		wifi_station_connect();
-
-
+		wifi_station_connect();
 	}
 }
 
-void wifi_event_handler_function(System_Event_t* event)
+void ICACHE_FLASH_ATTR wifi_event_handler_function(System_Event_t* event)
 {
 	//WIFI EVENT HANDLER FUNCTION
 	//SIMPLY PRINTS THE NAME OF THE WIFI EVENT FOR DEBUGGING
@@ -126,13 +166,9 @@ void wifi_event_handler_function(System_Event_t* event)
 		case EVENT_STAMODE_GOT_IP:
 			os_printf("EVENT : EVENT_STAMODE_GOT_IP\n");
 			os_printf("*** COMPLETE INIT DONE ***\n");
-			//SET SPI PINS AS QUICKLY AS POSSIBLE
-				ESP8266_SPI_init_pins();
-				os_printf("testing max7221\n");
-						MAX7221_7219_init();
-						MAX7221_7219_display_test(MAX7221_TRUE);
-						//AX7221_7219_clear_display();
-						//MAX7221_7219_draw_digit(MAX7221_ADDRESS_DIGIT_0, 255);
+			ESP8266_UDP_create_listener(25867, &udp_listener_cb);
+			os_printf("created udp listener on port 25867\n");
+
 			break;
 
 		case EVENT_SOFTAPMODE_STACONNECTED:
@@ -148,7 +184,7 @@ void wifi_event_handler_function(System_Event_t* event)
 	}
 }
 
-void timer_led_callback(void *pArg)
+void ICACHE_FLASH_ATTR timer_led_callback(void *pArg)
 {
 	LOCAL uint8_t led_on = 0;
 
@@ -167,7 +203,7 @@ void timer_led_callback(void *pArg)
 	}
 }
 
-void smartconfig_done_function(sc_status status, void* pdata)
+void ICACHE_FLASH_ATTR smartconfig_done_function(sc_status status, void* pdata)
 {
 	switch(status)
 	{
@@ -198,7 +234,6 @@ void smartconfig_done_function(sc_status status, void* pdata)
 			wifi_station_set_config(sta_conf);
 			wifi_station_disconnect();
 			wifi_station_connect();
-
 			//SET AUTO CONNECT = ON
 			wifi_station_set_auto_connect(1);
 			break;
@@ -218,14 +253,27 @@ void smartconfig_done_function(sc_status status, void* pdata)
 				os_printf("SMARTCONFIG - THIS FIRMEARE DOES NOT SUPPORT AIRKISS\n");
 			}
 			smartconfig_stop();
-
 			//SMARTCONFIG DONE
+			os_printf("*** smartconfig done\n");
 			//STOP THE LED TOGGLING TIMER
 			os_timer_disarm(&timer_led);
+			//WRITE TO FLASH
+			os_printf("writing to flash + doing soft reset");
+			ESP8266_FLASH_erase(FLASH_STORE_SECTOR);
+			os_printf("flash ersed\n");
+			ESP8266_FLASH_write(FLASH_STORE_SECTOR, (uint32_t*)&soft_reset_done, 4);
+			os_printf("flash written\n");
+			os_delay_us(1000);
+			//FORCE SYSTEM RESTART
+			system_restart();
 			break;
 	}
 }
 
+void udp_listener_cb(void* arg, char* pdata, uint16_t len)
+{
+	os_printf("received udp data of length = %d\n", len);
+}
 
 //THIS FUNCTION IS REQUIRED TO BE IN USER_MAIN.C BY ESP8266 SDK
 //COPIED FROM SDK EXAMPLES
