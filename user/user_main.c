@@ -17,7 +17,6 @@
 #include "ESP8266_SPI.h"
 #include "LCD_NOKIA_C100.h"
 #include "ESP8266_UDP.h"
-#include "ESP8266_FLASH.h"
 
 
 //////////////////////////////////
@@ -83,6 +82,13 @@ void ICACHE_FLASH_ATTR esp8266_init_complete(void)
 	LCD_NOKIA_C100_init();
 	LCD_NOKIA_C100_clear_screen(LCD_NOKIA_C100_COLOR_RED);
 
+	//NEED TO INIT THE LCD AGAIN TO MAKE IT WORK AS ON
+	//POWER ON ESP SAMPLES/DRIVES THE GPIO WHICH I AM NOT
+	//SURE ABOUT. THIS CAUSES LCD TO NOT INIT PROPERLY.
+	//TO MAKE IT WORK, NEED TO INIT AGAIN
+	LCD_NOKIA_C100_init();
+	LCD_NOKIA_C100_clear_screen(LCD_NOKIA_C100_COLOR_RED);
+
 	//PRINT SOME BADIC INFORMATION ABOUT THE MODULE
 	char system_mac[6];
 	wifi_get_macaddr(STATION_IF, system_mac);
@@ -110,33 +116,6 @@ void ICACHE_FLASH_ATTR esp8266_init_complete(void)
 	{
 		//NORMAL MODE
 		os_printf("normal operation mode\n");
-		//CHECK FLASH FOR SOFT RESET STATUS
-		os_printf("reading flash for soft reset status\n");
-		uint32_t val;
-		ESP8266_FLASH_read(FLASH_STORE_SECTOR, (uint32_t*)&val, 4);
-		os_printf("flash read\n");
-		if(val == soft_reset_done)
-		{
-			//SOFT RESET DONE. LCD SHOULD BE WORKING NOW
-			//CONTINUE AS NORMAL
-			os_printf("soft reset has been done. continue as normal + reset flash to soft reset not done\n");
-			ESP8266_FLASH_erase(FLASH_STORE_SECTOR);
-			os_printf("flash erased\n");
-			ESP8266_FLASH_write(FLASH_STORE_SECTOR, (uint32_t*)&soft_reset_not_done, 4);
-			os_printf("flash writteb reset not done\n");
-		}
-		else
-		{
-			//SOFT RESET NOT DONE. DO THAT TO MAKE LCD WORK
-			os_printf("soft reset not done. writing to flash soft reset done + doing soft reset\n");
-			ESP8266_FLASH_erase(FLASH_STORE_SECTOR);
-			os_printf("flash erased\n");
-			ESP8266_FLASH_write(FLASH_STORE_SECTOR, (uint32_t*)&soft_reset_done, 4);
-			os_printf("flash written\n");
-			//FORCE SYSTEM RESTART
-			os_delay_us(1000);
-			system_restart();
-		}
 		//CONNECT TO WIFI NETWORK
 		//USED INTERNALLY SAVED CONFIGURATION
 		wifi_set_opmode(STATION_MODE);
@@ -257,15 +236,6 @@ void ICACHE_FLASH_ATTR smartconfig_done_function(sc_status status, void* pdata)
 			os_printf("*** smartconfig done\n");
 			//STOP THE LED TOGGLING TIMER
 			os_timer_disarm(&timer_led);
-			//WRITE TO FLASH
-			os_printf("writing to flash + doing soft reset");
-			ESP8266_FLASH_erase(FLASH_STORE_SECTOR);
-			os_printf("flash ersed\n");
-			ESP8266_FLASH_write(FLASH_STORE_SECTOR, (uint32_t*)&soft_reset_done, 4);
-			os_printf("flash written\n");
-			os_delay_us(1000);
-			//FORCE SYSTEM RESTART
-			system_restart();
 			break;
 	}
 }

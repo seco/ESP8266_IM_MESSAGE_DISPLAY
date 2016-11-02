@@ -166,7 +166,7 @@ endif
 TARGET = app
 
 # which modules (subdirectories) of the project to include in compiling
-MODULES	= driver user user/libs/ESP8266_SPI user/libs/LCD_NOKIA_C100 user/libs/ESP8266_UDP user/libs/ESP8266_FLASH
+MODULES	= driver user user/libs/ESP8266_SPI user/libs/LCD_NOKIA_C100 user/libs/ESP8266_UDP
 EXTRA_INCDIR = include $(SDK_BASE)/../extra/include
 EXTRA_INCDIR := $(EXTRA_INCDIR) C:/Espressif/ESP8266_SDK/driver_lib/include/driver
 

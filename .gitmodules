@@ -7,6 +7,3 @@
 [submodule "user/libs/ESP8266_UDP"]
 	path = user/libs/ESP8266_UDP
 	url = https://github.com/ankitmcgill/ESP8266_UDP.git
-[submodule "user/libs/ESP8266_FLASH"]
-	path = user/libs/ESP8266_FLASH
-	url = https://github.com/ankitmcgill/ESP8266_FLASH.git
