@@ -19,22 +19,18 @@
 #include "LCD_NOKIA_C100.h"
 #include "ESP8266_UDP.h"
 #include <spi_flash.h>
-#include "FONT_courier_new_10pt_bold.h"
-#include "FONT_rolande_28pt.h"
-
+#include "application.h"
 
 //////////////////////////////////
 //FUNCTION PROTOTYPES
 //////////////////////////////////
 void esp8266_init_complete(void);
-//void set_wifi_parameters(void);
 void setup_gpio_pins(void);
 void timer_led_callback(void *pArg);
 void wifi_event_handler_function(System_Event_t* event);
 void smartconfig_done_function(sc_status status, void* pdata);
 void udp_listener_cb(void* arg, char* pdata, uint16_t len);
-void sntp_done_cb(uint32_t val);
-uint8_t get_ip_address(char* str);
+LOCAL void push_button_interrupt_cb(void* arg);
 
 //////////////////////////////////
 //GLOBAL VARIABLES
@@ -65,8 +61,11 @@ void ICACHE_FLASH_ATTR setup_gpio_pins(void)
 
 	WRITE_PERI_REG(PERIPHS_IO_MUX, 0x105);
 	PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0RXD_U, FUNC_GPIO3);
+	/*PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO5_U, FUNC_GPIO5);
+	GPIO_DIS_OUTPUT(5);*/
 	PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO5_U, FUNC_GPIO5);
-	GPIO_DIS_OUTPUT(5);
+	PIN_PULLUP_EN(PERIPHS_IO_MUX_GPIO5_U);
+	GPIO_DIS_OUTPUT(GPIO_ID_PIN(5));
 	PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO0_U, FUNC_GPIO0);
 
 	//INITIALIZA SPI
@@ -79,6 +78,9 @@ void ICACHE_FLASH_ATTR setup_gpio_pins(void)
 void ICACHE_FLASH_ATTR esp8266_init_complete(void)
 {
 	os_printf("ESP8266 module init complete\n");
+
+	//INITIALIZE APPLICATION
+	application_init();
 
 	uint32_t id = spi_flash_get_id();
 	os_printf("flash id %X\n", id);
@@ -107,23 +109,23 @@ void ICACHE_FLASH_ATTR esp8266_init_complete(void)
 			os_printf("FLASH_SIZE_32Mbit_MAP_1024_1024\n");
 			break;
 	}
-	os_printf("testing spi + nokia\n");
 
-	//SET ADDRESS LEN = 1 & DATA LEN = 8
 	//SPI CLK = 5Mhz (75% duty)
 	ESP8266_SPI_set_params(1,8, 8, 2, 3, 0);
+
+	//CLEAR LCD
 	LCD_NOKIA_C100_init();
-	LCD_NOKIA_C100_clear_screen(LCD_NOKIA_C100_COLOR_RED);
+	LCD_NOKIA_C100_clear_screen(LCD_NOKIA_C100_COLOR_BLACK);
 
 	//NEED TO INIT THE LCD AGAIN TO MAKE IT WORK AS ON
 	//POWER ON ESP SAMPLES/DRIVES THE GPIO WHICH I AM NOT
 	//SURE ABOUT. THIS CAUSES LCD TO NOT INIT PROPERLY.
 	//TO MAKE IT WORK, NEED TO INIT AGAIN
 	LCD_NOKIA_C100_init();
-	LCD_NOKIA_C100_clear_screen(LCD_NOKIA_C100_COLOR_RED);
+	LCD_NOKIA_C100_clear_screen(LCD_NOKIA_C100_COLOR_BLACK);
 
 	//DRAW NOMADIC LOGO ON LCD
-	LCD_NOKIA_C100_draw_bitmap(0, 131, 0, 161, 0xD0000, 42768);
+	application_draw_logo_bitmap();
 
 	//PRINT SOME BASIC INFORMATION ABOUT THE MODULE ON DEBUG
 	char system_mac[6];
@@ -134,7 +136,7 @@ void ICACHE_FLASH_ATTR esp8266_init_complete(void)
 	wifi_set_event_handler_cb(wifi_event_handler_function);
 
 	//DETERMINE WEATHER TO START IN STATION SMARTCONFIG MODE
-	if(GPIO_INPUT_GET(5) == 1)
+	if(GPIO_INPUT_GET(5) == 0)
 	{
 		//MODE SELECTION BUTTON PRESSED
 		//SMARTCONFIG MODE
@@ -144,8 +146,7 @@ void ICACHE_FLASH_ATTR esp8266_init_complete(void)
 		os_timer_arm(&timer_led, 500, 1);
 
 		//PRINT ON LCD
-		LCD_NOKIA_C100_draw_text(5, 100, courierNew_10ptBitmaps, courierNew_10ptDescriptors, 2, 13, "SmartConfig" , 11, LCD_NOKIA_C100_COLOR_RED, LCD_NOKIA_C100_COLOR_WHITE);
-		LCD_NOKIA_C100_draw_text(5, 115, courierNew_10ptBitmaps, courierNew_10ptDescriptors, 2, 13, "Mode" , 4, LCD_NOKIA_C100_COLOR_RED, LCD_NOKIA_C100_COLOR_WHITE);
+		application_draw_smartconfig_message();
 
 		//START SMARTCONFIG
 		//NEED THE MODULE TO BE IN STATION MODE FIRST FOR SMARTCONFIG TO WORK
@@ -186,9 +187,16 @@ void ICACHE_FLASH_ATTR wifi_event_handler_function(System_Event_t* event)
 			os_printf("EVENT : EVENT_STAMODE_GOT_IP\n");
 			os_printf("*** COMPLETE INIT DONE ***\n");
 
-			uint8_t ip_addr[15];
-			uint8_t len = get_ip_address(ip_addr);
-			LCD_NOKIA_C100_draw_text(5, 130, courierNew_10ptBitmaps, courierNew_10ptDescriptors, 2, 13, ip_addr , len, LCD_NOKIA_C100_COLOR_RED, LCD_NOKIA_C100_COLOR_WHITE);
+			application_draw_ip_address();
+
+			//ENABLE INTERRUPT ON PUSH BUTTON PIN (GPIO5)
+			//INTERRUPT ON LOW TO HIGH
+			//set_gpio_mode(1, GPIO_PULLDOWN, GPIO_INT);
+			ETS_GPIO_INTR_DISABLE();
+			ETS_GPIO_INTR_ATTACH(push_button_interrupt_cb, 5);
+			gpio_pin_intr_state_set(GPIO_ID_PIN(5), GPIO_PIN_INTR_NEGEDGE);
+			ETS_GPIO_INTR_ENABLE();
+
 			uint8_t i = 0;
 			for(i=0; i<21; i++)
 			{
@@ -196,15 +204,18 @@ void ICACHE_FLASH_ATTR wifi_event_handler_function(System_Event_t* event)
 			}
 			LCD_NOKIA_C100_clear_screen(LCD_NOKIA_C100_COLOR_BLACK);
 
-			LCD_NOKIA_C100_draw_text(10, 10, rolande_36ptBitmaps, rolande_36ptDescriptors, 3, 39, "23:59" , 7, LCD_NOKIA_C100_COLOR_GREEN, LCD_NOKIA_C100_COLOR_BLACK);
-			LCD_NOKIA_C100_draw_text(10, 55, courierNew_10ptBitmaps, courierNew_10ptDescriptors, 2, 13, "September30" , 11, LCD_NOKIA_C100_COLOR_ORANGE, LCD_NOKIA_C100_COLOR_BLACK);
-			LCD_NOKIA_C100_draw_text(10, 70, courierNew_10ptBitmaps, courierNew_10ptDescriptors, 2, 13, "2016" , 4, LCD_NOKIA_C100_COLOR_ORANGE, LCD_NOKIA_C100_COLOR_BLACK);
-			LCD_NOKIA_C100_draw_text(10, 85, courierNew_10ptBitmaps, courierNew_10ptDescriptors, 2, 13, "Tuesday" , 7, LCD_NOKIA_C100_COLOR_ORANGE, LCD_NOKIA_C100_COLOR_BLACK);
+			application_print_time_hour(22);
+			application_print_time_min(59);
+			application_print_time_month(9);
+			application_print_time_date(30);
+			application_print_time_year(2016);
+			application_print_time_day(2);
+			application_print_time_dots();
 
-			LCD_NOKIA_C100_draw_filled_box(3, 31, 112, 160, LCD_NOKIA_C100_COLOR_CYAN);
-			LCD_NOKIA_C100_draw_filled_box(36, 64, 112, 160, LCD_NOKIA_C100_COLOR_RED);
-			LCD_NOKIA_C100_draw_filled_box(69, 97, 112, 160, LCD_NOKIA_C100_COLOR_YELLOW);
-			LCD_NOKIA_C100_draw_outline_box(102, 130, 112, 160, 3, LCD_NOKIA_C100_COLOR_MAGENTA);
+			application_draw_im_notification_box(0);
+			application_draw_im_notification_box(1);
+			application_draw_im_notification_box(2);
+			application_draw_im_notification_box(3);
 
 			//struct ESP8266_UDP_HANDLE *h = (struct ESP8266_UDP_HANDLE*)os_zalloc(sizeof(struct ESP8266_UDP_HANDLE));
 			//ESP8266_UDP_create_listener(25867, &udp_listener_cb, h);
@@ -214,18 +225,6 @@ void ICACHE_FLASH_ATTR wifi_event_handler_function(System_Event_t* event)
 			struct ESP8266_UDP_HANDLE *h2 = (struct ESP8266_UDP_HANDLE*)os_zalloc(sizeof(struct ESP8266_UDP_HANDLE));
 			ESP8266_UDP_create_listener(123, &udp_listener_cb, h2);
 			os_printf("created udp listener on port 123\n");
-
-			/*
-			os_printf("doing sntp\n");
-			struct ip_addr* ipp = (struct ip_addr*)os_zalloc(sizeof(struct ip_addr));
-			ipp->addr = 1655688136;
-			ESP8266_SNTP_set_server(0, ipp);
-			//ESP8266_SNTP_set_server_name(0, "pool.ntp.org");
-			ESP8266_SNTP_set_timezone(5);
-			ESP8266_SNTP_set_callback(&sntp_done_cb);
-			ESP8266_SNTP_start();
-			ESP8266_SNTP_get_current_timestamp();
-			*/
 
 			os_printf("testing udp ntp\n");
 			struct ESP8266_UDP_HANDLE *h1 = (struct ESP8266_UDP_HANDLE*)os_zalloc(sizeof(struct ESP8266_UDP_HANDLE));
@@ -330,9 +329,19 @@ void udp_listener_cb(void* arg, char* pdata, uint16_t len)
 	os_printf("received udp data of length = %d\n", len);
 }
 
-void sntp_done_cb(uint32_t val)
+LOCAL void push_button_interrupt_cb(void* arg)
 {
-	os_printf("sntp timestamp %d\n", val);
+	//INTERRUPT HANDLER FUNCTION FOR PUSH BUTTON (GPIO5)
+
+	uint32 status = GPIO_REG_READ(GPIO_STATUS_ADDRESS);
+	if(status & BIT(5))
+	{
+		os_printf("push btn interrupt\n");
+		application_clear_im_notification_box();
+
+		// Clear interrupt
+		 GPIO_REG_WRITE(GPIO_STATUS_W1TC_ADDRESS, status & BIT(5));
+	}
 }
 
 //THIS FUNCTION IS REQUIRED TO BE IN USER_MAIN.C BY ESP8266 SDK
@@ -370,77 +379,4 @@ user_rf_cal_sector_set(void)
     return rf_cal_sec;
 }
 
-uint8_t get_ip_address(char* str)
-{
-	//RETURN THE IP ADDRESS IN THE PROVIDED
-	//CHARACTER STRING. RETURN VALUE IS THE LENGTH
-	//OF THE IP ADDRESS STRING
 
-	struct ip_info i;
-	wifi_get_ip_info(0, &i);
-
-	uint32_t ip = i.ip.addr;
-
-	uint8_t ip4 = (uint8_t)((ip & 0xFF000000) >> 24);
-	uint8_t ip3 = (uint8_t)((ip & 0x00FF0000) >> 16);
-	uint8_t ip2 = (uint8_t)((ip & 0x0000FF00) >> 8);
-	uint8_t ip1 = (uint8_t)(ip & 0x000000FF);
-
-	uint8_t len = 0;
-
-	if(ip1 > 99)
-	{
-		str[len] = (ip1/100) + 48; len++;
-		ip1 = ip1 % 100;
-	}
-	if(ip1 > 9)
-	{
-		str[len] = (ip1/10) + 48; len++;
-		ip1 = ip1 % 10;
-	}
-	str[len] = (ip1 % 10) + 48; len++;
-
-	str[len] = '.'; len++;
-
-	if(ip2 > 99)
-	{
-		str[len] = (ip2/100) + 48; len++;
-		ip2 = ip2 % 100;
-	}
-	if(ip2 > 9)
-	{
-		str[len] = (ip2/10) + 48; len++;
-		ip2 = ip2 % 10;
-	}
-	str[len] = (ip2 % 10) + 48; len++;
-
-	str[len] = '.'; len++;
-
-	if(ip3 > 99)
-	{
-		str[len] = (ip3/100) + 48; len++;
-		ip3 = ip3 % 100;
-	}
-	if(ip3 > 9)
-	{
-		str[len] = (ip3/10) + 48; len++;
-		ip3 = ip3 % 10;
-	}
-	str[len] = (ip3 % 10) + 48; len++;
-
-	str[len] = '.'; len++;
-
-	if(ip4 > 99)
-	{
-		str[len] = (ip4/100) + 48; len++;
-		ip4 = ip4 % 100;
-	}
-	if(ip4 > 9)
-	{
-		str[len] = (ip4/10) + 48; len++;
-		ip4 = ip4 % 10;
-	}
-	str[len] = (ip4 % 10) + 48; len++;
-
-	return len;
-}
