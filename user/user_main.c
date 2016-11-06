@@ -13,10 +13,14 @@
 #include <ets_sys.h>			//NEEDS TO BE THERE IN EVERY ESP8266 PROGRAM
 #include "user_interface.h"		//NEEDS TO BE THERE IN EVERY ESP8266 PROGRAM
 #include "uart.h"
+#include "mem.h"
 #include "smartconfig.h"
 #include "ESP8266_SPI.h"
 #include "LCD_NOKIA_C100.h"
 #include "ESP8266_UDP.h"
+#include <spi_flash.h>
+#include "FONT_courier_new_10pt_bold.h"
+#include "FONT_rolande_28pt.h"
 
 
 //////////////////////////////////
@@ -29,6 +33,8 @@ void timer_led_callback(void *pArg);
 void wifi_event_handler_function(System_Event_t* event);
 void smartconfig_done_function(sc_status status, void* pdata);
 void udp_listener_cb(void* arg, char* pdata, uint16_t len);
+void sntp_done_cb(uint32_t val);
+uint8_t get_ip_address(char* str);
 
 //////////////////////////////////
 //GLOBAL VARIABLES
@@ -74,6 +80,33 @@ void ICACHE_FLASH_ATTR esp8266_init_complete(void)
 {
 	os_printf("ESP8266 module init complete\n");
 
+	uint32_t id = spi_flash_get_id();
+	os_printf("flash id %X\n", id);
+	enum flash_size_map m = system_get_flash_size_map();
+	switch(m)
+	{
+		case FLASH_SIZE_4M_MAP_256_256:
+			os_printf("FLASH_SIZE_4Mbit_MAP_256_256\n");
+			break;
+		case FLASH_SIZE_2M:
+			os_printf("FLASH_SIZE_2Mbit\n");
+			break;
+		case FLASH_SIZE_8M_MAP_512_512:
+			os_printf("FLASH_SIZE_8Mbit_MAP_512_512\n");
+			break;
+		case FLASH_SIZE_16M_MAP_512_512:
+			os_printf("FLASH_SIZE_16Mbit_MAP_512_512\n");
+			break;
+		case FLASH_SIZE_32M_MAP_512_512:
+			os_printf("FLASH_SIZE_32Mbit_MAP_512_512\n");
+			break;
+		case FLASH_SIZE_16M_MAP_1024_1024:
+			os_printf("FLASH_SIZE_16Mbit_MAP_1024_1024\n");
+			break;
+		case FLASH_SIZE_32M_MAP_1024_1024:
+			os_printf("FLASH_SIZE_32Mbit_MAP_1024_1024\n");
+			break;
+	}
 	os_printf("testing spi + nokia\n");
 
 	//SET ADDRESS LEN = 1 & DATA LEN = 8
@@ -89,7 +122,10 @@ void ICACHE_FLASH_ATTR esp8266_init_complete(void)
 	LCD_NOKIA_C100_init();
 	LCD_NOKIA_C100_clear_screen(LCD_NOKIA_C100_COLOR_RED);
 
-	//PRINT SOME BADIC INFORMATION ABOUT THE MODULE
+	//DRAW NOMADIC LOGO ON LCD
+	LCD_NOKIA_C100_draw_bitmap(0, 131, 0, 161, 0xD0000, 42768);
+
+	//PRINT SOME BASIC INFORMATION ABOUT THE MODULE ON DEBUG
 	char system_mac[6];
 	wifi_get_macaddr(STATION_IF, system_mac);
 	os_printf("Module MAC ADDRESS : %02x:%02x:%02x:%02x:%02x:%02x\n", system_mac[0], system_mac[1], system_mac[2], system_mac[3], system_mac[4], system_mac[5]);
@@ -106,6 +142,10 @@ void ICACHE_FLASH_ATTR esp8266_init_complete(void)
 		//START TIMER TO TOGGLE LED @ 2Hz
 		os_timer_setfn(&timer_led, timer_led_callback, NULL);
 		os_timer_arm(&timer_led, 500, 1);
+
+		//PRINT ON LCD
+		LCD_NOKIA_C100_draw_text(5, 100, courierNew_10ptBitmaps, courierNew_10ptDescriptors, 2, 13, "SmartConfig" , 11, LCD_NOKIA_C100_COLOR_RED, LCD_NOKIA_C100_COLOR_WHITE);
+		LCD_NOKIA_C100_draw_text(5, 115, courierNew_10ptBitmaps, courierNew_10ptDescriptors, 2, 13, "Mode" , 4, LCD_NOKIA_C100_COLOR_RED, LCD_NOKIA_C100_COLOR_WHITE);
 
 		//START SMARTCONFIG
 		//NEED THE MODULE TO BE IN STATION MODE FIRST FOR SMARTCONFIG TO WORK
@@ -145,9 +185,54 @@ void ICACHE_FLASH_ATTR wifi_event_handler_function(System_Event_t* event)
 		case EVENT_STAMODE_GOT_IP:
 			os_printf("EVENT : EVENT_STAMODE_GOT_IP\n");
 			os_printf("*** COMPLETE INIT DONE ***\n");
-			ESP8266_UDP_create_listener(25867, &udp_listener_cb);
-			os_printf("created udp listener on port 25867\n");
 
+			uint8_t ip_addr[15];
+			uint8_t len = get_ip_address(ip_addr);
+			LCD_NOKIA_C100_draw_text(5, 130, courierNew_10ptBitmaps, courierNew_10ptDescriptors, 2, 13, ip_addr , len, LCD_NOKIA_C100_COLOR_RED, LCD_NOKIA_C100_COLOR_WHITE);
+			uint8_t i = 0;
+			for(i=0; i<21; i++)
+			{
+				os_delay_us(50000);
+			}
+			LCD_NOKIA_C100_clear_screen(LCD_NOKIA_C100_COLOR_BLACK);
+
+			LCD_NOKIA_C100_draw_text(10, 10, rolande_36ptBitmaps, rolande_36ptDescriptors, 3, 39, "23:59" , 7, LCD_NOKIA_C100_COLOR_GREEN, LCD_NOKIA_C100_COLOR_BLACK);
+			LCD_NOKIA_C100_draw_text(10, 55, courierNew_10ptBitmaps, courierNew_10ptDescriptors, 2, 13, "September30" , 11, LCD_NOKIA_C100_COLOR_ORANGE, LCD_NOKIA_C100_COLOR_BLACK);
+			LCD_NOKIA_C100_draw_text(10, 70, courierNew_10ptBitmaps, courierNew_10ptDescriptors, 2, 13, "2016" , 4, LCD_NOKIA_C100_COLOR_ORANGE, LCD_NOKIA_C100_COLOR_BLACK);
+			LCD_NOKIA_C100_draw_text(10, 85, courierNew_10ptBitmaps, courierNew_10ptDescriptors, 2, 13, "Tuesday" , 7, LCD_NOKIA_C100_COLOR_ORANGE, LCD_NOKIA_C100_COLOR_BLACK);
+
+			LCD_NOKIA_C100_draw_filled_box(3, 31, 112, 160, LCD_NOKIA_C100_COLOR_CYAN);
+			LCD_NOKIA_C100_draw_filled_box(36, 64, 112, 160, LCD_NOKIA_C100_COLOR_RED);
+			LCD_NOKIA_C100_draw_filled_box(69, 97, 112, 160, LCD_NOKIA_C100_COLOR_YELLOW);
+			LCD_NOKIA_C100_draw_outline_box(102, 130, 112, 160, 3, LCD_NOKIA_C100_COLOR_MAGENTA);
+
+			//struct ESP8266_UDP_HANDLE *h = (struct ESP8266_UDP_HANDLE*)os_zalloc(sizeof(struct ESP8266_UDP_HANDLE));
+			//ESP8266_UDP_create_listener(25867, &udp_listener_cb, h);
+			//os_printf("created udp listener on port 25867\n");
+
+			os_printf("setting up ntp listener\n");
+			struct ESP8266_UDP_HANDLE *h2 = (struct ESP8266_UDP_HANDLE*)os_zalloc(sizeof(struct ESP8266_UDP_HANDLE));
+			ESP8266_UDP_create_listener(123, &udp_listener_cb, h2);
+			os_printf("created udp listener on port 123\n");
+
+			/*
+			os_printf("doing sntp\n");
+			struct ip_addr* ipp = (struct ip_addr*)os_zalloc(sizeof(struct ip_addr));
+			ipp->addr = 1655688136;
+			ESP8266_SNTP_set_server(0, ipp);
+			//ESP8266_SNTP_set_server_name(0, "pool.ntp.org");
+			ESP8266_SNTP_set_timezone(5);
+			ESP8266_SNTP_set_callback(&sntp_done_cb);
+			ESP8266_SNTP_start();
+			ESP8266_SNTP_get_current_timestamp();
+			*/
+
+			os_printf("testing udp ntp\n");
+			struct ESP8266_UDP_HANDLE *h1 = (struct ESP8266_UDP_HANDLE*)os_zalloc(sizeof(struct ESP8266_UDP_HANDLE));
+			uint8_t data[48] = {0};
+			data[0] = 0x0B;
+			ESP8266_UDP_send_data_ip(128, 138, 141, 172, 123, data, 48, h1);
+			os_printf("udp data sent\n");
 			break;
 
 		case EVENT_SOFTAPMODE_STACONNECTED:
@@ -245,6 +330,11 @@ void udp_listener_cb(void* arg, char* pdata, uint16_t len)
 	os_printf("received udp data of length = %d\n", len);
 }
 
+void sntp_done_cb(uint32_t val)
+{
+	os_printf("sntp timestamp %d\n", val);
+}
+
 //THIS FUNCTION IS REQUIRED TO BE IN USER_MAIN.C BY ESP8266 SDK
 //COPIED FROM SDK EXAMPLES
 uint32 ICACHE_FLASH_ATTR
@@ -280,4 +370,77 @@ user_rf_cal_sector_set(void)
     return rf_cal_sec;
 }
 
+uint8_t get_ip_address(char* str)
+{
+	//RETURN THE IP ADDRESS IN THE PROVIDED
+	//CHARACTER STRING. RETURN VALUE IS THE LENGTH
+	//OF THE IP ADDRESS STRING
 
+	struct ip_info i;
+	wifi_get_ip_info(0, &i);
+
+	uint32_t ip = i.ip.addr;
+
+	uint8_t ip4 = (uint8_t)((ip & 0xFF000000) >> 24);
+	uint8_t ip3 = (uint8_t)((ip & 0x00FF0000) >> 16);
+	uint8_t ip2 = (uint8_t)((ip & 0x0000FF00) >> 8);
+	uint8_t ip1 = (uint8_t)(ip & 0x000000FF);
+
+	uint8_t len = 0;
+
+	if(ip1 > 99)
+	{
+		str[len] = (ip1/100) + 48; len++;
+		ip1 = ip1 % 100;
+	}
+	if(ip1 > 9)
+	{
+		str[len] = (ip1/10) + 48; len++;
+		ip1 = ip1 % 10;
+	}
+	str[len] = (ip1 % 10) + 48; len++;
+
+	str[len] = '.'; len++;
+
+	if(ip2 > 99)
+	{
+		str[len] = (ip2/100) + 48; len++;
+		ip2 = ip2 % 100;
+	}
+	if(ip2 > 9)
+	{
+		str[len] = (ip2/10) + 48; len++;
+		ip2 = ip2 % 10;
+	}
+	str[len] = (ip2 % 10) + 48; len++;
+
+	str[len] = '.'; len++;
+
+	if(ip3 > 99)
+	{
+		str[len] = (ip3/100) + 48; len++;
+		ip3 = ip3 % 100;
+	}
+	if(ip3 > 9)
+	{
+		str[len] = (ip3/10) + 48; len++;
+		ip3 = ip3 % 10;
+	}
+	str[len] = (ip3 % 10) + 48; len++;
+
+	str[len] = '.'; len++;
+
+	if(ip4 > 99)
+	{
+		str[len] = (ip4/100) + 48; len++;
+		ip4 = ip4 % 100;
+	}
+	if(ip4 > 9)
+	{
+		str[len] = (ip4/10) + 48; len++;
+		ip4 = ip4 % 10;
+	}
+	str[len] = (ip4 % 10) + 48; len++;
+
+	return len;
+}
