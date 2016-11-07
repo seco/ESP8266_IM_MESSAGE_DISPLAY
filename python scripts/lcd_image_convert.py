@@ -5,7 +5,8 @@
 # November 3 2016
 # ankit.bhatnagarindia@gmail.com
 #
-# Usage : python lcd.py <image_file_name>
+# USAGE:
+#   python lcd.py <image_file_name>
 #
 # OUTPUTS:
 #	output.lcd - final resized image (132x162) in RBG(565) binary format

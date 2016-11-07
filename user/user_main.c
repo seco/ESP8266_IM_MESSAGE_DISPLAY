@@ -26,7 +26,6 @@
 //////////////////////////////////
 void esp8266_init_complete(void);
 void setup_gpio_pins(void);
-void timer_led_callback(void *pArg);
 void wifi_event_handler_function(System_Event_t* event);
 void smartconfig_done_function(sc_status status, void* pdata);
 void udp_listener_cb(void* arg, char* pdata, uint16_t len);
@@ -35,9 +34,7 @@ LOCAL void push_button_interrupt_cb(void* arg);
 //////////////////////////////////
 //GLOBAL VARIABLES
 //////////////////////////////////
-os_timer_t timer_led;
-uint32_t soft_reset_done = 1;
-uint32_t soft_reset_not_done = 0;
+
 
 void user_init(void)
 {
@@ -60,9 +57,6 @@ void ICACHE_FLASH_ATTR setup_gpio_pins(void)
 	//GPIO-D0  : INPUT  : CLEAR MESSAGE PUSH BUTTON
 
 	WRITE_PERI_REG(PERIPHS_IO_MUX, 0x105);
-	PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0RXD_U, FUNC_GPIO3);
-	/*PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO5_U, FUNC_GPIO5);
-	GPIO_DIS_OUTPUT(5);*/
 	PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO5_U, FUNC_GPIO5);
 	PIN_PULLUP_EN(PERIPHS_IO_MUX_GPIO5_U);
 	GPIO_DIS_OUTPUT(GPIO_ID_PIN(5));
@@ -141,9 +135,6 @@ void ICACHE_FLASH_ATTR esp8266_init_complete(void)
 		//MODE SELECTION BUTTON PRESSED
 		//SMARTCONFIG MODE
 		os_printf("smartconfig mode\n");
-		//START TIMER TO TOGGLE LED @ 2Hz
-		os_timer_setfn(&timer_led, timer_led_callback, NULL);
-		os_timer_arm(&timer_led, 500, 1);
 
 		//PRINT ON LCD
 		application_draw_smartconfig_message();
@@ -247,24 +238,6 @@ void ICACHE_FLASH_ATTR wifi_event_handler_function(System_Event_t* event)
 	}
 }
 
-void ICACHE_FLASH_ATTR timer_led_callback(void *pArg)
-{
-	LOCAL uint8_t led_on = 0;
-
-	os_printf("timer led called ... ");
-	os_printf("time : %d\n", system_get_time());
-
-	if(!led_on)
-	{
-		GPIO_OUTPUT_SET(3, 1);
-		led_on = 1;
-	}
-	else
-	{
-		GPIO_OUTPUT_SET(3,0);
-		led_on = 0;
-	}
-}
 
 void ICACHE_FLASH_ATTR smartconfig_done_function(sc_status status, void* pdata)
 {
@@ -318,8 +291,6 @@ void ICACHE_FLASH_ATTR smartconfig_done_function(sc_status status, void* pdata)
 			smartconfig_stop();
 			//SMARTCONFIG DONE
 			os_printf("*** smartconfig done\n");
-			//STOP THE LED TOGGLING TIMER
-			os_timer_disarm(&timer_led);
 			break;
 	}
 }
