@@ -9,6 +9,7 @@
 #include "LCD_NOKIA_C100.h"
 #include "FONT_courier_new_10pt_bold.h"
 #include "FONT_rolande_28pt.h"
+#include "ESP8266_UDP.h"
 
 #define APPLICATION_COLOR_TIME LCD_NOKIA_C100_COLOR_GREEN
 #define APPLICATION_COLOR_DATE LCD_NOKIA_C100_COLOR_ORANGE
@@ -39,6 +40,13 @@ struct time* NTP_TIME;
 struct message_box* IM_MESSAGE_BOX;
 
 void application_init(void);
+
+void application_set_im_udp_listener(uint16_t port);
+void application_im_udp_listener_cb(void* arg, char* pdata, uint16_t len);
+
+void application_setup_push_button_interrupt(void);
+void application_push_button_interrupt_cb(void* arg);
+
 void application_get_time_ntp();
 void application_start_timer_tick();
 

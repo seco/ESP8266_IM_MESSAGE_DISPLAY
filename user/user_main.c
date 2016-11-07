@@ -13,12 +13,8 @@
 #include <ets_sys.h>			//NEEDS TO BE THERE IN EVERY ESP8266 PROGRAM
 #include "user_interface.h"		//NEEDS TO BE THERE IN EVERY ESP8266 PROGRAM
 #include "uart.h"
-#include "mem.h"
 #include "smartconfig.h"
-#include "ESP8266_SPI.h"
 #include "LCD_NOKIA_C100.h"
-#include "ESP8266_UDP.h"
-#include <spi_flash.h>
 #include "application.h"
 
 //////////////////////////////////
@@ -28,8 +24,6 @@ void esp8266_init_complete(void);
 void setup_gpio_pins(void);
 void wifi_event_handler_function(System_Event_t* event);
 void smartconfig_done_function(sc_status status, void* pdata);
-void udp_listener_cb(void* arg, char* pdata, uint16_t len);
-LOCAL void push_button_interrupt_cb(void* arg);
 
 //////////////////////////////////
 //GLOBAL VARIABLES
@@ -181,12 +175,10 @@ void ICACHE_FLASH_ATTR wifi_event_handler_function(System_Event_t* event)
 			application_draw_ip_address();
 
 			//ENABLE INTERRUPT ON PUSH BUTTON PIN (GPIO5)
-			//INTERRUPT ON LOW TO HIGH
-			//set_gpio_mode(1, GPIO_PULLDOWN, GPIO_INT);
-			ETS_GPIO_INTR_DISABLE();
-			ETS_GPIO_INTR_ATTACH(push_button_interrupt_cb, 5);
-			gpio_pin_intr_state_set(GPIO_ID_PIN(5), GPIO_PIN_INTR_NEGEDGE);
-			ETS_GPIO_INTR_ENABLE();
+			application_setup_push_button_interrupt();
+
+			//CREATE UDP LISTENER FOR IM MESSAGES ON PORT 22837
+			application_set_im_udp_listener(22837);
 
 			uint8_t i = 0;
 			for(i=0; i<21; i++)
@@ -202,27 +194,6 @@ void ICACHE_FLASH_ATTR wifi_event_handler_function(System_Event_t* event)
 			application_print_time_year(2016);
 			application_print_time_day(2);
 			application_print_time_dots();
-
-			application_draw_im_notification_box(0);
-			application_draw_im_notification_box(1);
-			application_draw_im_notification_box(2);
-			application_draw_im_notification_box(3);
-
-			//struct ESP8266_UDP_HANDLE *h = (struct ESP8266_UDP_HANDLE*)os_zalloc(sizeof(struct ESP8266_UDP_HANDLE));
-			//ESP8266_UDP_create_listener(25867, &udp_listener_cb, h);
-			//os_printf("created udp listener on port 25867\n");
-
-			os_printf("setting up ntp listener\n");
-			struct ESP8266_UDP_HANDLE *h2 = (struct ESP8266_UDP_HANDLE*)os_zalloc(sizeof(struct ESP8266_UDP_HANDLE));
-			ESP8266_UDP_create_listener(123, &udp_listener_cb, h2);
-			os_printf("created udp listener on port 123\n");
-
-			os_printf("testing udp ntp\n");
-			struct ESP8266_UDP_HANDLE *h1 = (struct ESP8266_UDP_HANDLE*)os_zalloc(sizeof(struct ESP8266_UDP_HANDLE));
-			uint8_t data[48] = {0};
-			data[0] = 0x0B;
-			ESP8266_UDP_send_data_ip(128, 138, 141, 172, 123, data, 48, h1);
-			os_printf("udp data sent\n");
 			break;
 
 		case EVENT_SOFTAPMODE_STACONNECTED:
@@ -295,25 +266,6 @@ void ICACHE_FLASH_ATTR smartconfig_done_function(sc_status status, void* pdata)
 	}
 }
 
-void udp_listener_cb(void* arg, char* pdata, uint16_t len)
-{
-	os_printf("received udp data of length = %d\n", len);
-}
-
-LOCAL void push_button_interrupt_cb(void* arg)
-{
-	//INTERRUPT HANDLER FUNCTION FOR PUSH BUTTON (GPIO5)
-
-	uint32 status = GPIO_REG_READ(GPIO_STATUS_ADDRESS);
-	if(status & BIT(5))
-	{
-		os_printf("push btn interrupt\n");
-		application_clear_im_notification_box();
-
-		// Clear interrupt
-		 GPIO_REG_WRITE(GPIO_STATUS_W1TC_ADDRESS, status & BIT(5));
-	}
-}
 
 //THIS FUNCTION IS REQUIRED TO BE IN USER_MAIN.C BY ESP8266 SDK
 //COPIED FROM SDK EXAMPLES

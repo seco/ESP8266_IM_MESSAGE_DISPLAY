@@ -10,6 +10,62 @@ void application_init(void)
 	IM_MESSAGE_BOX = (struct message_box*)os_zalloc(sizeof(struct message_box));
 }
 
+void application_set_im_udp_listener(uint16_t port)
+{
+	//SETUP THE UDP LISTENER FOR THE IM BOX MESSAGES
+
+	struct ESP8266_UDP_HANDLE *h = (struct ESP8266_UDP_HANDLE*)os_zalloc(sizeof(struct ESP8266_UDP_HANDLE));
+	ESP8266_UDP_create_listener(port, &application_im_udp_listener_cb, h);
+	os_printf("created udp listener on port %d\n", port);
+}
+
+void application_im_udp_listener_cb(void* arg, char* pdata, uint16_t len)
+{
+	//CALLBACK FUNCTION FOR UDP IM MESSAGES
+
+	os_printf("received im message of len %d", len);
+	switch(pdata[0])
+	{
+		case 'A':
+			os_printf("drawing im box for anand\n");
+			application_draw_im_notification_box(0);
+			break;
+		case 'R':
+			os_printf("drawing im box for rajendra\n");
+			application_draw_im_notification_box(1);
+			break;
+	}
+}
+
+void application_setup_push_button_interrupt(void)
+{
+	//SETUP THE PUSH BUTTON INTERRUPT FOR BUTTON
+	//CONNECTED TO GPIO 5
+
+	//ENABLE INTERRUPT ON PUSH BUTTON PIN (GPIO5)
+	//INTERRUPT ON LOW TO HIGH
+	//set_gpio_mode(1, GPIO_PULLDOWN, GPIO_INT);
+	ETS_GPIO_INTR_DISABLE();
+	ETS_GPIO_INTR_ATTACH(application_push_button_interrupt_cb, 5);
+	gpio_pin_intr_state_set(GPIO_ID_PIN(5), GPIO_PIN_INTR_NEGEDGE);
+	ETS_GPIO_INTR_ENABLE();
+}
+
+void application_push_button_interrupt_cb(void* arg)
+{
+	//PUSH BUTTON INTERRUPT ISR
+
+	uint32 status = GPIO_REG_READ(GPIO_STATUS_ADDRESS);
+	if(status & BIT(5))
+	{
+		os_printf("push btn interrupt\n");
+		application_clear_im_notification_box();
+
+		// Clear interrupt
+		 GPIO_REG_WRITE(GPIO_STATUS_W1TC_ADDRESS, status & BIT(5));
+	}
+}
+
 void application_get_time_ntp()
 {
 	//GET THE TIME FROM NTP SERVER
