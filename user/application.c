@@ -22,19 +22,12 @@ void application_set_im_udp_listener(uint16_t port)
 void application_im_udp_listener_cb(void* arg, char* pdata, uint16_t len)
 {
 	//CALLBACK FUNCTION FOR UDP IM MESSAGES
+	//BYTE 0 : NAME (LETTER TO PRINT INSIDE BOX)
+	//BYTE 1 : LOCATION OF BOX (0-3)
 
 	os_printf("received im message of len %d", len);
-	switch(pdata[0])
-	{
-		case 'A':
-			os_printf("drawing im box for anand\n");
-			application_draw_im_notification_box(0);
-			break;
-		case 'R':
-			os_printf("drawing im box for rajendra\n");
-			application_draw_im_notification_box(1);
-			break;
-	}
+	os_printf("drawing box at location %d with letter %c\n", pdata[1], pdata[0]);
+	application_draw_im_notification_box(pdata[0], pdata[1]);
 }
 
 void application_setup_push_button_interrupt(void)
@@ -274,11 +267,12 @@ void application_draw_ip_address(void)
 	LCD_NOKIA_C100_draw_text(5, 130, courierNew_10ptBitmaps, courierNew_10ptDescriptors, 2, 13, ip_addr , len, APPLICATION_COLOR_IP, LCD_NOKIA_C100_COLOR_WHITE);
 }
 
-void application_draw_im_notification_box(uint8_t box_num)
+void application_draw_im_notification_box(uint8_t box_num, uint8_t letter)
 {
 	//DRAW THE NOTIFICATION BOX
 	//BOX_NUM : 0 TO 3
 	//DRAW A BOX IF NOT ALREADY DRAWN
+	//DRAW THE SPECIFIED LETTER INSIDE IT
 
 	switch(box_num)
 	{
@@ -286,6 +280,7 @@ void application_draw_im_notification_box(uint8_t box_num)
 			if(IM_MESSAGE_BOX->box_0 == 0)
 			{
 				LCD_NOKIA_C100_draw_filled_box(3, 31, 112, 160, LCD_NOKIA_C100_COLOR_CYAN);
+				LCD_NOKIA_C100_draw_text(3 + 5, 31 + 5, courierNew_18ptBitmaps, courierNew_18ptDescriptors, 3, 24, &letter, 1, LCD_NOKIA_C100_COLOR_WHITE, LCD_NOKIA_C100_COLOR_BLACK);
 				IM_MESSAGE_BOX->box_0 = 1;
 			}
 			break;
@@ -293,6 +288,7 @@ void application_draw_im_notification_box(uint8_t box_num)
 			if(IM_MESSAGE_BOX->box_1 == 0)
 			{
 				LCD_NOKIA_C100_draw_filled_box(36, 64, 112, 160, LCD_NOKIA_C100_COLOR_RED);
+				LCD_NOKIA_C100_draw_text(36 + 5, 64 + 5, courierNew_18ptBitmaps, courierNew_18ptDescriptors, 3, 24, &letter, 1, LCD_NOKIA_C100_COLOR_WHITE, LCD_NOKIA_C100_COLOR_BLACK);
 				IM_MESSAGE_BOX->box_1 = 1;
 			}
 			break;
@@ -300,6 +296,7 @@ void application_draw_im_notification_box(uint8_t box_num)
 			if(IM_MESSAGE_BOX->box_2 == 0)
 			{
 				LCD_NOKIA_C100_draw_filled_box(69, 97, 112, 160, LCD_NOKIA_C100_COLOR_YELLOW);
+				LCD_NOKIA_C100_draw_text(69 + 5, 97 + 5, courierNew_18ptBitmaps, courierNew_18ptDescriptors, 3, 24, &letter, 1, LCD_NOKIA_C100_COLOR_WHITE, LCD_NOKIA_C100_COLOR_BLACK);
 				IM_MESSAGE_BOX->box_2 = 1;
 			}
 			break;
@@ -307,6 +304,7 @@ void application_draw_im_notification_box(uint8_t box_num)
 			if(IM_MESSAGE_BOX->box_3 == 0)
 			{
 				LCD_NOKIA_C100_draw_outline_box(102, 130, 112, 160, 3, LCD_NOKIA_C100_COLOR_MAGENTA);
+				LCD_NOKIA_C100_draw_text(102 + 5, 130 + 5, courierNew_18ptBitmaps, courierNew_18ptDescriptors, 3, 24, &letter, 1, LCD_NOKIA_C100_COLOR_WHITE, LCD_NOKIA_C100_COLOR_BLACK);
 				IM_MESSAGE_BOX->box_3 = 1;
 			}
 	}

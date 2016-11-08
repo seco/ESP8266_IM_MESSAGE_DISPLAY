@@ -8,6 +8,7 @@
 #include "gpio16.h"
 #include "LCD_NOKIA_C100.h"
 #include "FONT_courier_new_10pt_bold.h"
+#include "FONT_courier_new_18pt.h"
 #include "FONT_rolande_28pt.h"
 #include "ESP8266_UDP.h"
 
@@ -47,8 +48,8 @@ void application_im_udp_listener_cb(void* arg, char* pdata, uint16_t len);
 void application_setup_push_button_interrupt(void);
 void application_push_button_interrupt_cb(void* arg);
 
-void application_get_time_ntp();
-void application_start_timer_tick();
+void application_get_time_ntp(void);
+void application_start_timer_tick(void);
 
 void application_print_time(uint8_t h, uint8_t m, uint8_t month, uint8_t date, uint16_t y, uint8_t day);
 void application_print_time_dots(void);
@@ -63,8 +64,8 @@ void application_print_time_day(uint8_t day);
 void application_draw_logo_bitmap(void);
 void application_draw_smartconfig_message(void);
 void application_draw_ip_address(void);
-void application_draw_im_notification_box(uint8_t box_num);
-void application_clear_im_notification_box();
+void application_draw_im_notification_box(uint8_t box_num, uint8_t letter);
+void application_clear_im_notification_box(void);
 
 uint8_t application_get_ip_address_string(char* str);
 
