@@ -20,17 +20,17 @@
 //////////////////////////////////
 //FUNCTION PROTOTYPES
 //////////////////////////////////
-void esp8266_init_complete(void);
-void setup_gpio_pins(void);
-void wifi_event_handler_function(System_Event_t* event);
-void smartconfig_done_function(sc_status status, void* pdata);
+void ICACHE_FLASH_ATTR esp8266_init_complete(void);
+void ICACHE_FLASH_ATTR setup_gpio_pins(void);
+void ICACHE_FLASH_ATTR wifi_event_handler_function(System_Event_t* event);
+void ICACHE_FLASH_ATTR smartconfig_done_function(sc_status status, void* pdata);
 
 //////////////////////////////////
 //GLOBAL VARIABLES
 //////////////////////////////////
 
 
-void user_init(void)
+void ICACHE_FLASH_ATTR user_init(void)
 {
 	//SET USART0 BAUD RATE TO 115200 BPS
 	//BY DEFAULT PIN GPIO1 SET TO UART0 TXD FUNCTIONALITY
@@ -187,13 +187,15 @@ void ICACHE_FLASH_ATTR wifi_event_handler_function(System_Event_t* event)
 			}
 			LCD_NOKIA_C100_clear_screen(LCD_NOKIA_C100_COLOR_BLACK);
 
-			application_print_time_hour(22);
-			application_print_time_min(59);
-			application_print_time_month(9);
-			application_print_time_date(30);
-			application_print_time_year(2016);
-			application_print_time_day(2);
-			application_print_time_dots();
+
+
+			//GET THE TIME FROM NTP FOR THE FIRST TIME ON INTILIZATION
+			application_get_time_ntp();
+
+			//START THE TIME TICKER FUNCTIONS
+			application_start_timer_tick();
+
+
 			break;
 
 		case EVENT_SOFTAPMODE_STACONNECTED:
@@ -269,8 +271,7 @@ void ICACHE_FLASH_ATTR smartconfig_done_function(sc_status status, void* pdata)
 
 //THIS FUNCTION IS REQUIRED TO BE IN USER_MAIN.C BY ESP8266 SDK
 //COPIED FROM SDK EXAMPLES
-uint32 ICACHE_FLASH_ATTR
-user_rf_cal_sector_set(void)
+uint32 ICACHE_FLASH_ATTR user_rf_cal_sector_set(void)
 {
     enum flash_size_map size_map = system_get_flash_size_map();
     uint32 rf_cal_sec = 0;

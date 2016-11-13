@@ -15,7 +15,7 @@
 
 #!/usr/bin/python
 
-import os,sys,Image
+import os,sys,Image,struct
 
 #create and open output file
 output_name = "output.lcd"
@@ -52,14 +52,10 @@ lcd_byte_2 = 0
 for i in range((img2_in.size)[1]):
 	for j in range ((img2_in.size)[0]):
 		#Do pixel RGB processing
-		pixel_r = (img2_ptr[j,i])[0]//8
-		pixel_g = (img2_ptr[j,i])[1]//4
-		pixel_b = (img2_ptr[j,i])[2]//8
-		lcd_byte_1 = (pixel_r << 3) | (pixel_g >> 3)
-		lcd_byte_2 = (pixel_b) | ((pixel_g & 0x07) << 5)
-		#write to file
-		out1.write(chr(lcd_byte_1))
-		out1.write(chr(lcd_byte_2))
+		r = (img2_ptr[j,i][0] >> 3) & 0x1f
+		g = (img2_ptr[j,i][1] >> 2) & 0x3f
+		b = (img2_ptr[j,i][2] >> 3) & 0x1f
+		out1.write(struct.pack('H', (r << 11) + (g << 5) + b))
 		pixel_num += 1
 		byte_num += 2
 print "Processed fill image : " + str(pixel_num) + " pixels, " + str(byte_num) + " bytes"

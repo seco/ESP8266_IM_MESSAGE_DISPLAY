@@ -9,9 +9,9 @@
    xmlns="http://www.w3.org/2000/svg"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   width="210mm"
-   height="297mm"
-   viewBox="0 0 744.09449 1052.3622"
+   width="132"
+   height="162"
+   viewBox="0 0 132 162"
    id="svg3369"
    version="1.1"
    inkscape:version="0.91 r13725"
@@ -25,13 +25,13 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="0.59"
-     inkscape:cx="-172.49316"
-     inkscape:cy="469.90018"
+     inkscape:zoom="1.58"
+     inkscape:cx="-131.56962"
+     inkscape:cy="159.13402"
      inkscape:document-units="px"
      inkscape:current-layer="layer2"
      showgrid="false"
-     units="mm"
+     units="px"
      inkscape:window-width="1854"
      inkscape:window-height="900"
      inkscape:window-x="-8"
@@ -53,15 +53,15 @@
      inkscape:label="Layer 1"
      inkscape:groupmode="layer"
      id="layer1"
-     transform="translate(0,4.4724409e-5)" />
+     transform="translate(0,-890.36212)" />
   <g
      inkscape:groupmode="layer"
      id="layer2"
      inkscape:label="Layer 2"
-     transform="translate(0,890.3622)">
+     transform="translate(0,3.7382812e-5)">
     <g
        id="g3340"
-       transform="matrix(7.8580163,0,0,7.8580163,-148.12622,-904.66678)">
+       transform="matrix(1.1678422,0,0,1.1678422,-9.5195667,0.56385076)">
       <circle
          r="38.049957"
          cy="936.88782"
