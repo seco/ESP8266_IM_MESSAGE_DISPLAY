@@ -49,10 +49,15 @@ const uint8_t month_names_length[12] = {
 									};
 
 const uint8_t ntp_server_list[3][4] = {
-										{132, 163, 4, 103},
-										{66, 199, 22, 67},
-										{24, 56, 178, 140}
+										{128, 138, 140, 044},
+										{216, 229, 000, 179},
+										{066, 199, 022, 067}
 									};
+
+uint8_t ntp_current_server_index = 0;
+uint8_t ntp_switch_ip_timer_started = 0;
+os_timer_t ntp_server_timer;
+uint8_t ntp_successfull = 0;
 
 struct time* NTP_TIME;
 struct message_box* IM_MESSAGE_BOX;
@@ -124,7 +129,14 @@ void ICACHE_FLASH_ATTR application_send_ntp_request()
 	//SEND A NTP TIME REQUEST PACKET TO NTP SERVER PORT 123 FROM LOCAL PORT 55555
 	//AND GET THE REPLY
 
-	const char ntp_server[] = "pool.ntp.org";
+	ntp_successfull = 0;
+
+	//setup ntp server switch timer
+	//1 second ntp server switch
+	if(ntp_switch_ip_timer_started == 0)
+	{
+		os_timer_setfn(&ntp_server_timer, application_switch_ntp_server_cb, NULL);
+	}
 
 	uint8_t packet[48] = {0};
 	packet[0] = 0x0B;
@@ -135,13 +147,66 @@ void ICACHE_FLASH_ATTR application_send_ntp_request()
 		ntp_handle = (struct ESP8266_UDP_HANDLE*)os_zalloc(sizeof(struct ESP8266_UDP_HANDLE));
 
 	}
-	ESP8266_UDP_send_receive_data_ip(132, 163, 4, 103, 123 , 55555, packet, 48, application_ntp_udp_listener_cb, ntp_handle);
-	os_printf("ntp request sent. waiting for reply\n");
+	os_printf("********\n");
+	ESP8266_UDP_send_receive_data_ip(ntp_server_list[ntp_current_server_index][0], ntp_server_list[ntp_current_server_index][1],
+									ntp_server_list[ntp_current_server_index][2], ntp_server_list[ntp_current_server_index][3],
+									123 , 55555, packet, 48, application_ntp_udp_listener_cb, ntp_handle);
+
+	os_printf("ntp request sent to ntp server %d. waiting for reply\n", ntp_current_server_index);
+
+	//start ntp server switch timer, only if not already started
+	if(ntp_switch_ip_timer_started == 0)
+	{
+		os_timer_arm(&ntp_server_timer, 1000, 1);
+		ntp_switch_ip_timer_started = 1;
+	}
+}
+
+void ICACHE_FLASH_ATTR application_switch_ntp_server_cb(void)
+{
+	//ntp server reply timed out.
+	//switch the global ntp server list index variable
+	//so that the next ntp server can be tried
+
+	if(ntp_switch_ip_timer_started == 1)
+	{
+		ntp_current_server_index++;
+		os_printf("switching ntp server index to %d\n", ntp_current_server_index);
+
+		if(ntp_current_server_index == 3)
+		{
+			//all 3 ntp servers have been tried
+			//and exhausted
+			os_printf("all ntp servers tried and exhausted. no reply !\n");
+			LCD_NOKIA_C100_draw_text(10, 15, courierNew_10ptBitmaps, courierNew_10ptDescriptors, 2, 13, "NTP Error" , 9, LCD_NOKIA_C100_COLOR_RED, LCD_NOKIA_C100_COLOR_BLACK);
+
+			ntp_switch_ip_timer_started = 0;
+			ntp_current_server_index = 0;
+
+			//disable and turn off timer
+			os_timer_disarm(ntp_server_timer);
+
+			ntp_successfull = 0;
+		}
+		else
+		{
+			//send a new ntp request with the new server
+			application_send_ntp_request();
+		}
+	}
 }
 
 void ICACHE_FLASH_ATTR application_ntp_udp_listener_cb(void* arg, char* pdata, uint16_t len)
 {
 	//CALLBACK FUNCTION FOR NTP REPLY
+
+	//received reply from ntp server
+	//stop the ntp server switch timer
+	//ntp successfull
+	os_timer_disarm(&ntp_server_timer);
+	ntp_switch_ip_timer_started = 0;
+	ntp_current_server_index = 0;
+	ntp_successfull = 1;
 
 	os_printf("received NTP message of len %d\n", len);
 	//extract the 32 bit timestamp from ntp reply

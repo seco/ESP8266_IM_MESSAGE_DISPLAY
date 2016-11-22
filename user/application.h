@@ -48,6 +48,10 @@ struct message_box
 };
 
 const uint8_t ntp_server_list[3][4];
+uint8_t ntp_current_server_index;
+os_timer_t ntp_server_timer;
+uint8_t ntp_switch_ip_timer_started;
+uint8_t ntp_successfull;
 
 struct time* NTP_TIME;
 struct message_box* IM_MESSAGE_BOX;
@@ -66,6 +70,7 @@ void ICACHE_FLASH_ATTR application_push_button_interrupt_cb(void* arg);
 
 void ICACHE_FLASH_ATTR application_send_ntp_request(void);
 void ICACHE_FLASH_ATTR application_ntp_udp_listener_cb(void* arg, char* pdata, uint16_t len);
+void ICACHE_FLASH_ATTR application_switch_ntp_server_cb(void);
 
 void ICACHE_FLASH_ATTR application_get_time_ntp(void);
 void ICACHE_FLASH_ATTR application_get_time_components_from_ntp_timestamp(void);

@@ -188,7 +188,6 @@ void ICACHE_FLASH_ATTR wifi_event_handler_function(System_Event_t* event)
 			LCD_NOKIA_C100_clear_screen(LCD_NOKIA_C100_COLOR_BLACK);
 
 
-
 			//GET THE TIME FROM NTP FOR THE FIRST TIME ON INTILIZATION
 			application_get_time_ntp();
 
