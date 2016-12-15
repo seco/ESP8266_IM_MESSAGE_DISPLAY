@@ -1,0 +1,5 @@
+The unit takes UDP IM Message in format
+
+UDP PORT : 22837
+
+[NAME FIRST CHAR][BOX LOCATION 0-3][MESSAGE (OPTIONAL)]

@@ -232,6 +232,11 @@ void ICACHE_FLASH_ATTR application_get_time_ntp(void)
 {
 	//GET THE TIME FROM NTP SERVER
 	//SEND NTP REQUEST AND CREATE A LISTENER FOR REPLY
+
+	ntp_successfull = 0;
+	ntp_switch_ip_timer_started = 0;
+	ntp_current_server_index = 0;
+
 	application_send_ntp_request();
 }
 
